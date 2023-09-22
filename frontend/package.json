@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "eslint": "^8.47.0",
+    "eslint-plugin-vue": "^9.17.0"
+  }
+}
