@@ -5,7 +5,7 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from flask import make_response
 from datetime import datetime
-#from sqlalchemy import or_
+from sqlalchemy import or_
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 from flask_bcrypt import check_password_hash,Bcrypt
 from workers import celery_init_app
@@ -213,7 +213,13 @@ def all_venues():
         )
         db.session.add(new_venue)
         db.session.commit()
-        return jsonify({'status': 'success', 'message': 'Venue added successfully'}), 201
+        return {'status': 'success', 'message': 'Venue added successfully', 'venue' : {
+            'id' : new_venue.id,
+            'name' : new_venue.name,
+            'place' : new_venue.place,
+            'capacity' : new_venue.capacity,
+            'city' : new_venue.city
+        }}
         
     else:
         venues = Venue.query.all()
@@ -225,7 +231,7 @@ def all_venues():
                 'place': venue.place,
                 'city': venue.city,
                 'capacity': venue.capacity,
-                'shows': [show.show_name for show in venue.shows]
+                
             })
         return jsonify({'status': 'success', 'venues': venue_list}), 200
         
@@ -245,7 +251,7 @@ def single_venue(venue_id):
             venue.place = post_data.get('place')
             venue.city = post_data.get('city')
             venue.capacity = post_data.get('capacity')
-            # venue.shows=post_data.get('shows')
+            
             
             db.session.commit()
             return jsonify({"status": "success", "message": "Venue updated successfully"}), 200
@@ -291,7 +297,7 @@ def all_shows():
         db.session.commit()
         response_object['message'] = 'Show Added!'
         new_show = Show.query.get(new_show.id)
-        return ({
+        return {
             'id': new_show.id,
             'show_name': new_show.show_name,
             'genre': new_show.genre,
@@ -306,7 +312,7 @@ def all_shows():
                 'place': new_show.venue.place,
                 'city': new_show.venue.city
             }
-        }),
+        }
     else:
         print("hello")
         shows = Show.query.all()
@@ -378,27 +384,27 @@ def single_show(show_id):
             show.genre = post_data.get('genre')
             show.rating = post_data.get('rating')
             show.price = post_data.get('price')
-            show.starttime = post_data.get('starttime')
-            show.endtime = post_data.get('endtime')
+            show.date = post_data.get('date')
+            show.time = post_data.get('time')
             show.available_seats = post_data.get('available_seats')
             show.venue_id = post_data.get('venue_id')
             
             db.session.commit()
-            return jsonify({"status": "success", "message": "Show updated successfully"}), 200
+            return {"status": "success", "message": "Show updated successfully"}, 200
         else:
-            return jsonify({"status": "error", "message": "Show not found"}), 404
+            return {"status": "error", "message": "Show not found"}, 404
             
     elif request.method == 'DELETE':
         show = Show.query.get(show_id)
         if show:
             db.session.delete(show)
             db.session.commit()
-            return jsonify({"status": "success", "message": "Show deleted successfully"}), 200
+            return {"status": "success", "message": "Show deleted successfully"}, 200
         else:
-            return jsonify({"status": "error", "message": "Show not found"}), 404
+            return {"status": "error", "message": "Show not found"}, 404
             
     else:
-        return jsonify({"status": "error", "message": "Invalid request method"}), 405
+        return {"status": "error", "message": "Invalid request method"}, 405
 
 
 
@@ -485,6 +491,7 @@ def all_bookings():
         for booking in bookings:
             if booking is not None:
                 booking_list.append({
+                    "user_id":booking.user_id,
                     'id':booking.id,
                     'show_id':booking.show_id,
                     'number_of_seats':booking.number_of_seats,
@@ -497,7 +504,7 @@ def all_bookings():
                     # 'price':booking.show.price,
                     # 'total_price':booking.number_of_seats*booking.show.price
                 })
-            return jsonify({'status':'success','bookings':booking_list}),200
+        return {'status':'success','bookings':booking_list}
     elif request.method=="POST":
         data=request.get_json()
         show_id=data.get('show_id')
@@ -517,7 +524,7 @@ def all_bookings():
         db.session.add(new_booking)
         show.available_seats-=int(number_of_seats)
         db.session.commit()
-        return jsonify({'status':'success','message':'Booking successful'}),201
+        return {'status':'success','message':'Booking successful'}
 
             
 # added functionality for deleting and getting single booking

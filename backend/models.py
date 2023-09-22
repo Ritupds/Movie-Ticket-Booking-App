@@ -31,6 +31,7 @@ class User(db.Model):
     email = db.Column(db.String, unique = True)
     password = db.Column(db.String, nullable = False)
     active = db.Column(db.Boolean())
+    bookings = db.relationship('Booking', backref='user', lazy=True)
     roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
 
 class Admin(db.Model):
@@ -46,6 +47,7 @@ class Role(db.Model):
 
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     show_id = db.Column(db.Integer, db.ForeignKey('show.id'), nullable=False)
     number_of_seats = db.Column(db.Integer, nullable=False)
     show = db.relationship('Show', backref='bookings')
