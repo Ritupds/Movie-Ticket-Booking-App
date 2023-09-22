@@ -1,87 +1,54 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session,send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 # from flask_security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin
 from flask_cors import CORS
 from flask import make_response
 from datetime import datetime
-from sqlalchemy import or_
+#from sqlalchemy import or_
 from flask_jwt_extended import JWTManager, create_access_token, get_jwt_identity, jwt_required
 from flask_bcrypt import check_password_hash,Bcrypt
-# from workers import celery_init_app
-# import task
-# from celery.schedules import crontab
+from workers import celery_init_app
+import task
+import os 
+from celery.schedules import crontab
 
+from db import db
 
 app = Flask(__name__)
 
-CORS(app)
-
-
+app.secret_key=os.urandom(24)
+# app.config["SECRET_KEY"]="mysecretkey"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-app.config['SECURITY_PASSWORD_HASH'] = 'bcrypt'
+# app.config['SECURITY_PASSWORD_HASH'] = 'bcrypt'
 app.config['JWT_SECRET_KEY']='your_secret_key'
-
-
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-jwt = JWTManager(app)
-bcrypt = Bcrypt(app)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 
 
-class Venue(db.Model):
-    __tablename__ = 'venue'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    place = db.Column(db.String(100), nullable=False)
-    city = db.Column(db.String(100), nullable=False)
-    capacity = db.Column(db.Integer, nullable=False)
-    shows = db.relationship('Show', backref='venue', lazy=True)
+# db = SQLAlchemy(app)
+# migrate = Migrate(app, db)
 
-class Show(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    show_name = db.Column(db.String(100), nullable=False)
-    genre = db.Column(db.String, nullable = False)
-    rating = db.Column(db.Integer, nullable = False)
-    price = db.Column(db.Integer, nullable = False)
-    date = db.Column(db.String(10), nullable=False)
-    time = db.Column(db.String(5), nullable=False)
-    available_seats = db.Column(db.Integer, default=0, nullable=False)
+with app.app_context():
+    db.init_app(app)
+    from models import User, Venue, Show, Booking, Admin
+    db.create_all()
+    celery=celery_init_app(app)
+    jwt = JWTManager(app)
+    bcrypt = Bcrypt(app)
+    CORS(app)
     
-    venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'), nullable=False)
 
-roles_users = db.Table('roles_users',
-                       db.Column('user_id' , db.Integer(), db.ForeignKey('user.id')),
-                       db.Column('role_id' , db.Integer(), db.ForeignKey('role.id')))
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key = True)
-    name = db.Column(db.String, nullable = False)
-    email = db.Column(db.String, unique = True)
-    password = db.Column(db.String, nullable = False)
-    active = db.Column(db.Boolean())
-    roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
+@celery.on_after_configure.connect
+def setup_periodic_tasks(sender, **kwargs):
+    sender.add_periodic_task(
+        crontab("*"),
+        task.Daily_remainder.s()
+        )
 
-class Admin(db.Model):
-    id = db.Column(db.Integer, primary_key= True)
-    name = db.Column(db.String, nullable =False)
-    email = db.Column(db.String, unique = True)
-    password = db.Column(db.String, nullable = False)
-
-class Role(db.Model):
-    id = db.Column(db.Integer, primary_key = True)
-    name = db.Column(db.String, nullable = False)
-    description = db.Column(db.String(255))
-
-class Booking(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    show_id = db.Column(db.Integer, db.ForeignKey('show.id'), nullable=False)
-    number_of_seats = db.Column(db.Integer, nullable=False)
-    show = db.relationship('Show', backref='bookings')
-
-app.app_context().push()
-db.create_all()
+# app.app_context().push()
+# db.create_all()
 
 def user_loader(user_id):
     if User.query.get(int(user_id)) is not None:
@@ -129,8 +96,8 @@ def register():
 def login():
     if request.method =="POST":
         data=request.get_json()
-        email = request.form['email']
-        password = request.form['password']
+        email = data['email']
+        password = data['password']
         if not email or not password:
             return jsonify({"status":"error","message": "Missing email or password parameter"}), 400
 
@@ -235,9 +202,7 @@ def all_venues():
     if request.method == "POST":
         current_user = admin_loader(get_jwt_identity())
         print(current_user)
-        if not current_user.is_admin:
-            print("hello")
-            return jsonify({'status': 'error', 'message': 'You are not authorized to perform this action'}), 401
+        
             
         post_data = request.get_json()
         new_venue = Venue(
@@ -268,8 +233,9 @@ def all_venues():
 @jwt_required()
 def single_venue(venue_id):
     current_user = admin_loader(get_jwt_identity())
-    if not current_user.is_admin:
-        return jsonify({'status': 'error', 'message': 'You are not authorized to perform this action'}), 401
+    print(current_user)
+    # if not current_user.is_admin:
+    #     return jsonify({'status': 'error', 'message': 'You are not authorized to perform this action'}), 401
 
     if request.method == "PUT":
         post_data = request.get_json()
@@ -304,14 +270,12 @@ def single_venue(venue_id):
 @app.route('/admindashboard/shows', methods=['GET', 'POST'])
 @jwt_required()
 def all_shows():
-    print("Received a request to /admindashboard")
 
     response_object = {'status': 'success'}
     
     if request.method == "POST":
         current_user = admin_loader(get_jwt_identity())
-        if not current_user.is_admin:
-            return jsonify({'status': 'error', 'message': 'You are not authorized to perform this action'}), 401
+        print(current_user)
         post_data = request.get_json()
         new_show = Show(
             show_name=post_data.get('show_name'),
@@ -327,7 +291,7 @@ def all_shows():
         db.session.commit()
         response_object['message'] = 'Show Added!'
         new_show = Show.query.get(new_show.id)
-        return jsonify({
+        return ({
             'id': new_show.id,
             'show_name': new_show.show_name,
             'genre': new_show.genre,
@@ -344,6 +308,7 @@ def all_shows():
             }
         }),
     else:
+        print("hello")
         shows = Show.query.all()
         show_list = []
         for show in shows:
@@ -362,8 +327,10 @@ def all_shows():
                     'place': show.venue.place,
                     'city': show.venue.city
                 }
+                
             })
-            return jsonify({'status': 'success', 'shows': show_list}), 200
+        print(show_list)    
+        return {'status': 'success', 'shows': show_list}, 200
 # fetching show details for booking form
 
 @app.route('/admindashboard/shows/<int:show_id>', methods=['GET'])
@@ -398,9 +365,10 @@ def get_show_details(show_id):
 @jwt_required()
 def single_show(show_id):
     current_user = admin_loader(get_jwt_identity())
-    if not current_user.is_admin:
-        return jsonify({'status': 'error', 'message': 'You are not authorized to perform this action'}), 401
-    response_object = {'status': 'success'}
+    print(current_user)
+    # if not current_user.is_admin:
+    #     return jsonify({'status': 'error', 'message': 'You are not authorized to perform this action'}), 401
+    # response_object = {'status': 'success'}
 
     if request.method == "PUT":
         post_data = request.get_json()
@@ -520,14 +488,14 @@ def all_bookings():
                     'id':booking.id,
                     'show_id':booking.show_id,
                     'number_of_seats':booking.number_of_seats,
-                    'show_name':booking.show.show_name,
-                    'venue_name':booking.show.venue.name,
-                    'venue_place':booking.show.venue.place,
-                    'venue_city':booking.show.venue.city,
-                    'date':booking.show.date,
-                    'time':booking.show.time,
-                    'price':booking.show.price,
-                    'total_price':booking.number_of_seats*booking.show.price
+                    # 'show_name':booking.show.show_name,
+                    # 'venue_name':booking.show.venue.name,
+                    # 'venue_place':booking.show.venue.place,
+                    # 'venue_city':booking.show.venue.city,
+                    # 'date':booking.show.date,
+                    # 'time':booking.show.time,
+                    # 'price':booking.show.price,
+                    # 'total_price':booking.number_of_seats*booking.show.price
                 })
             return jsonify({'status':'success','bookings':booking_list}),200
     elif request.method=="POST":
