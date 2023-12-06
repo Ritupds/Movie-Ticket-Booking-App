@@ -14,6 +14,8 @@
           <div class="col-sm-12">
             <br /><br />
             <h2 class="text-center">Welcome to User Dashboard</h2>
+            <br> <br> 
+            
 
             <!-- Search Bar -->
             <div class="input-group mb-3">
@@ -25,6 +27,7 @@
                 placeholder="Search venues and shows"
               />
             </div>
+            
 
             <!-- Shows Table -->
             <div class="table-responsive">
@@ -36,7 +39,7 @@
                     <th>Date</th>
                     <th>Time</th>
                     <th>available_seats</th>
-                    <th>Venue Name</th>
+                    <th>Venue Name/Place</th>
                     <th>Venue City</th>
                     <th>Action</th>
                   </tr>
@@ -47,7 +50,7 @@
                     <td>{{ show.date }}</td>
                     <td>{{ show.time }}</td>
                     <td>{{ show.available_seats }}</td>
-                    <td>{{ show.venue.name }}</td>
+                    <td>{{ show.venue.name }},{{ show.venue.place }}</td>
                     <td>{{ show.venue.city }}</td>
                     <td>
                       <router-link :to="'/bookings/' + show.id"
@@ -73,6 +76,10 @@
         <p>Show Name: {{ showDetails[booking.show_id].show_name }}</p>
         <p>Show Date: {{ showDetails[booking.show_id].date }}</p>
         <p>Show Time: {{ showDetails[booking.show_id].time }}</p>
+        <p>Venue Name: {{ showDetails[booking.show_id].venue.name }}</p>
+        <p>Venue City: {{ showDetails[booking.show_id].venue.city }}</p>
+        
+        
       </div>
 
       <div v-else>
@@ -114,6 +121,7 @@ export default {
   },
   
   methods: {
+  
     fetchVenues() {
       const path = "http://127.0.0.1:5000/admindashboard/venues";
       axios

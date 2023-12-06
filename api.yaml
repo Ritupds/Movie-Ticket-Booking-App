@@ -1,0 +1,206 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: My Flask API
+  description: API documentation for My Flask Application
+paths:
+  /admindashboard/venues:
+    get:
+      summary: Get all venues
+      responses:
+        '200':
+          description: A list of venues
+    post:
+      summary: Add a new venue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                place:
+                  type: string
+                city:
+                  type: string
+                capacity:
+                  type: integer
+      responses:
+        '201':
+          description: Venue added successfully
+  /admindashboard/venues/{venue_id}:
+    put:
+      summary: Update a venue
+      parameters:
+        - name: venue_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                place:
+                  type: string
+                city:
+                  type: string
+                capacity:
+                  type: integer
+      responses:
+        '200':
+          description: Venue updated successfully
+        '404':
+          description: Venue not found
+    delete:
+      summary: Delete a venue
+      parameters:
+        - name: venue_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Venue deleted successfully
+        '404':
+          description: Venue not found
+  /admindashboard/shows:
+    get:
+      summary: Get all shows
+      responses:
+        '200':
+          description: A list of shows
+    post:
+      summary: Add a new show
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_name:
+                  type: string
+                genre:
+                  type: string
+                rating:
+                  type: string
+                price:
+                  type: number
+                date:
+                  type: string
+                time:
+                  type: string
+                available_seats:
+                  type: integer
+                venue_id:
+                  type: integer
+      responses:
+        '201':
+          description: Show added successfully
+  /admindashboard/shows/{show_id}:
+    put:
+      summary: Update a show
+      parameters:
+        - name: show_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_name:
+                  type: string
+                genre:
+                  type: string
+                rating:
+                  type: string
+                price:
+                  type: number
+                date:
+                  type: string
+                time:
+                  type: string
+                available_seats:
+                  type: integer
+                venue_id:
+                  type: integer
+      responses:
+        '200':
+          description: Show updated successfully
+        '404':
+          description: Show not found
+    delete:
+      summary: Delete a show
+      parameters:
+        - name: show_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Show deleted successfully
+        '404':
+          description: Show not found
+  /search/shows:
+    get:
+      summary: Search shows by query
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of matching shows
+  /bookings:
+    get:
+      summary: Get all user bookings
+      responses:
+        '200':
+          description: A list of user bookings
+    post:
+      summary: Create a new booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                show_id:
+                  type: integer
+                number_of_seats:
+                  type: integer
+      responses:
+        '200':
+          description: Booking successful
+  /admindashboard/shows/{show_id}:
+    get:
+      summary: Get show details by ID
+      parameters:
+        - name: show_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Show details
+        '404':
+          description: Show not found

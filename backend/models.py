@@ -7,7 +7,7 @@ class Venue(db.Model):
     place = db.Column(db.String(100), nullable=False)
     city = db.Column(db.String(100), nullable=False)
     capacity = db.Column(db.Integer, nullable=False)
-    shows = db.relationship('Show', backref='venue', lazy=True)
+    shows = db.relationship('Show', backref='venue', lazy=True, cascade="all, delete-orphan")
 
 class Show(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -18,12 +18,9 @@ class Show(db.Model):
     date = db.Column(db.String(10), nullable=False)
     time = db.Column(db.String(5), nullable=False)
     available_seats = db.Column(db.Integer, default=0, nullable=False)
-    
     venue_id = db.Column(db.Integer, db.ForeignKey('venue.id'), nullable=False)
+    bookings = db.relationship('Booking', backref='show', lazy=True, cascade="all, delete-orphan")
 
-roles_users = db.Table('roles_users',
-                       db.Column('user_id' , db.Integer(), db.ForeignKey('user.id')),
-                       db.Column('role_id' , db.Integer(), db.ForeignKey('role.id')))
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key = True)
@@ -32,7 +29,7 @@ class User(db.Model):
     password = db.Column(db.String, nullable = False)
     active = db.Column(db.Boolean())
     bookings = db.relationship('Booking', backref='user', lazy=True)
-    roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
+    
 
 class Admin(db.Model):
     id = db.Column(db.Integer, primary_key= True)
@@ -40,14 +37,10 @@ class Admin(db.Model):
     email = db.Column(db.String, unique = True)
     password = db.Column(db.String, nullable = False)
 
-class Role(db.Model):
-    id = db.Column(db.Integer, primary_key = True)
-    name = db.Column(db.String, nullable = False)
-    description = db.Column(db.String(255))
-
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     show_id = db.Column(db.Integer, db.ForeignKey('show.id'), nullable=False)
+    booking_time = db.Column(db.DateTime, nullable = False)
     number_of_seats = db.Column(db.Integer, nullable=False)
-    show = db.relationship('Show', backref='bookings')
+    

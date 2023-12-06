@@ -24,23 +24,6 @@
           <input v-model="password" type="password" id="password" required>
         </div>
 <br> <br> 
-       <!-- <p> select the user role</p>
-        <div>
-          
-        <input type="radio"
-               id="User"
-               name="role"
-               value="user">
-        <label for="User">user</label>
-    </div>
- 
-    <div>
-        <input type="radio"
-               id="Admin"
-               name="role"
-               value="admin">
-        <label for="Admin">Admin</label>
-    </div> -->
         <button type="submit" class="btn btn-primary">Register</button>
       </form>
 
@@ -62,7 +45,7 @@
         name: '',
         email: '',
         password: '',
-        // role:'',
+      
       };
     },
     methods: {
@@ -73,11 +56,19 @@
             email: this.email,
             password: this.password,
           })
-          .then(response => {
-            console.log(response.data.message);
+          // .then(response => {
+          //   console.log(response.data.message);
             
+          // })
+          .then(()=> {
+            this.error="";
+            if (this.$route.name !== "UserLogin") {
+              this.$router.push({ name: "UserLogin" });
+              this.message = "You have been registered successfully. Please login.";
+            }
           })
           .catch(error => {
+            this.error="An error occured while registering."
             console.error(error);
             
           });

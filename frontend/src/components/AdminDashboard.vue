@@ -14,6 +14,8 @@
           <div class="col-sm-12">
             <br /><br />
 
+            <button type="button" @click="Venuedata" class="btn btn-primary">DownLoad</button>
+
             <h1>Venue Details</h1>
             <hr />
             <br />
@@ -594,17 +596,14 @@ export default {
         place: "",
         city: "",
         capacity: "",
-        // shows: [],
+      
       },
       editForm: {
         name: "",
         place: "",
         city: "",
         capacity: "",
-        // shows: [],
       },
-
-      // availableShows: [],
 
       addShowForm: {
         show_name: "",
@@ -642,6 +641,10 @@ export default {
   },
 
   methods: {
+    Venuedata() {
+    window.location.href = "http://127.0.0.1:5000/download"
+    
+  },
     // Venue Methods
     getVenues() {
       const path = "http://127.0.0.1:5000/admindashboard/venues";
@@ -706,62 +709,34 @@ export default {
           console.error("Failed to add show", error);
         });
     },
-    // updateVenue(payload, venueID) {
-    //   const path = `http://127.0.0.1:5000/admindashboard/venues/${venueID}`;
-    //   axios
-    //     .put(path, payload, this.axiosConfig)
-    //     .then(() => {
-    //       this.venues=this.venues.map((venue)=>
-    //       venue.id===venueID?{...venue,...payload}:venue
-    //       );
-    //       this.message = "Venue updated!";
-    //       this.showMessage = true;
-    //       this.$refs.editVenueModal.hide();
-    //       this.getVenues();
-    //     })
-    //     .catch((err) => {
-    //       console.error(err);
-    //     });
-    // },
-
-    
-
+  
   updateVenue(payload, venueID) {
-    const path = `http://127.0.0.1:5000/admindashboard/venues/${venueID}`;
-    axios
-      .put(path, payload, this.axiosConfig)
+    const path = `http://localhost:5000/admindashboard/venues/${venueID}`;
+    axios.put(path, payload, this.axiosConfig)
       .then(() => {
-        // Update the venues array with the updated venue data
-        this.venues = this.venues.map((venue) =>
-          venue.id === venueID ? { ...venue, ...payload } : venue
-        );
-        this.message = "Venue updated!";
+        this.getVenues();
         this.showMessage = true;
-        this.$refs.editVenueModal.hide();
+        this.message = "Venue updated!";
       })
-      .catch((error) => {
-        console.error(error);
+      .catch((err) => {
+        console.error(err);
+        this.getVenues();
       });
   },
+   
     updateShow(payload, showID) {
-      const path = `http://127.0.0.1:5000/admindashboard/shows/${showID}`;
-      axios
-        .put(path, payload, this.axiosConfig)
-        .then(() => {
-         this.shows=this.shows.map((show)=>
-          show.id===showID?{...show,...payload}:show
-          );
-          this.getShows();
-          this.message = "Show updated!";
-          this.showMessage = true;
-          this.$refs.editShowModal.hide();
-
-        })
-        .catch((err) => {
-          console.error(err);
-
-        });
-    },
+    const path = `http://localhost:5000/admindashboard/shows/${showID}`;
+    axios.put(path, payload, this.axiosConfig)
+      .then(() => {
+        this.getShows();
+        this.showMessage = true;
+        this.message = "Show updated!";
+      })
+      .catch((err) => {
+        console.error(err);
+        this.getShows();
+      });
+  },
 
     showEditModel(show){
       this.editShowForm={...show};
@@ -775,24 +750,10 @@ export default {
       this.$refs.editVenueModal.show();
     },
 
-    // deleteVenue(venueID){
-    //   const path = `http://127.0.0.1:5000/admindashboard/venues/${venueID}`;
-    //   axios
-    //     .delete(path,this.axiosConfig)
-    //     .then(()=>{
-    //       this.venues=this.venues.filter((venue)=>venue.id!==venueID);
-    //       this.message="Venue deleted!";
-    //       this.showMessage=true;
-    //     })
-    //     .catch((err)=>{
-    //       console.error(err);
-    //     });
-    // },
-
     removeVenue(venueID) {
     const confirmed = window.confirm('Are you sure you want to delete this venue?');
       if (!confirmed) {
-        // If the user cancels the deletion, do nothing
+      
         return;
       }
       const path = `http://127.0.0.1:5000/admindashboard/venues/${venueID}`;
@@ -814,7 +775,7 @@ export default {
   removeShow(showID) {
     const confirmed = window.confirm('Are you sure you want to delete this show?');
     if (!confirmed) {
-      // If the user cancels the deletion, do nothing
+      
       return;
     }
     const path = `http://127.0.0.1:5000/admindashboard/shows/${showID}`;
@@ -943,8 +904,6 @@ export default {
     this.getVenues();
   },
   logout() {
-    // Perform any necessary logout actions, such as clearing session data, tokens, or local storage.
-    // For simplicity, we will redirect to the admin login page.
     localStorage.removeItem("access_token");
     this.$router.push({ name: "AdminLogin" });
   },

@@ -23,16 +23,22 @@
           <label for="password">Password:</label>
           <input v-model="password" type="password" id="password" required>
         </div>
-<br> <br> 
-    <button type="submit" class="btn btn-primary">Register</button>
-      </form>
-
+          <br> <br> 
+      <div class="text-center">    
+      <button type="submit" class="btn btn-primary">Register</button>
+    </div>  
+    </form>
+      <br> <br>
+      <div class="text-center">
+          <button class="btn btn-primary" @click="goToLogin">Login</button>
+        </div>
       
 
             </div>
             </div>
         </div>
-        </div>
+       
+    </div>
     </div>
   </template>
   
@@ -45,7 +51,7 @@
         name: '',
         email: '',
         password: '',
-        // role:'',
+        
       };
     },
     methods: {
@@ -56,14 +62,21 @@
             email: this.email,
             password: this.password,
           })
-          .then(response => {
-            console.log(response.data.message);
-            
-          })
+          
+          .then(()=>{
+            this.error="";
+            if (this.$route.name !== 'admin_login') {
+              this.$router.push('/admin_login');
+            }
+
+          })  
           .catch(error => {
             console.error(error);
             
           });
+      },
+      goToLogin() {
+        this.$router.push('/admin_login');
       },
     },
   };
