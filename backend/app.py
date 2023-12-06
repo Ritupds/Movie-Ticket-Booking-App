@@ -22,7 +22,7 @@ celery=Celery(app.name, broker="redis://localhost:6379/1" , backend= "redis://lo
 
 cache = Cache(app, config={
     'CACHE_TYPE': 'redis',
-    'CACHE_REDIS_URL': 'redis://localhost:6379/3'
+    'CACHE_REDIS_URL': 'redis://127.0.0.1:6379/0'
     })
 
 app.secret_key=os.urandom(24)
@@ -41,8 +41,6 @@ app.config['MAIL_USE_SSL'] = False
 app.config['MAIL_DEFAULT_SENDER'] = 'do-not-reply@localhost.com'
 
 mail=Mail(app)
-# db = SQLAlchemy(app)
-# migrate = Migrate(app, db) 
 
 with app.app_context():
     db.init_app(app)
@@ -54,6 +52,8 @@ with app.app_context():
     CORS(app)
     cache.init_app(app)
 
+#celery tasks and jobs
+
 celery.conf.beat_schedule={
     'Daily_reminder': {
         'task': 'app.Daily_remainder',
@@ -61,10 +61,9 @@ celery.conf.beat_schedule={
     },
     'Monthly_report': {
         'task': 'app.Monthly_report',
-        'schedule':crontab(hour=15,minute=55)
+        'schedule':crontab(day_of_month='1',hour=9,minute=00)
     }
 }
-
 
 @celery.task
 def Daily_remainder():
@@ -73,14 +72,13 @@ def Daily_remainder():
         bookings=Booking.query.all()
         for booking in bookings:
             s= datetime.now() - timedelta(days=1)
-            if booking.booking_time >= s:
+            if booking.booking_time <= s:
                 user=User.query.get(booking.user_id)
                 response=requests.post("https://chat.googleapis.com/v1/spaces/AAAAOwSzyCM/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=m_WAZWPIrHGCTlmjuzQsaZ8nkX36DfkTgAy9fntlPqs",data=json.dumps({"text":f"Hi, {user.name}, Do remember to check out the new shows for today?"}))
                 return response.ok
             # else:
             #     return jsonify({'message':'wrong time'})
 
-            
 @celery.task
 def Monthly_report():
     with app.app_context():
@@ -89,7 +87,7 @@ def Monthly_report():
             bookings = Booking.query.filter_by(user_id=user.id).all()
 
             msg = Message("Monthly report", recipients=[user.email])
-            msg.body = "This is your monthly report"
+            # msg.body = "This is your monthly report"
 
             # Define the HTML content using an f-string with Bootstrap classes
             report_html = f"""
@@ -116,7 +114,6 @@ def Monthly_report():
                         </thead>
                         <tbody>
             """
-
             # Add booking details to the HTML content
             for booking in bookings:
                 show = booking.show
@@ -131,31 +128,29 @@ def Monthly_report():
                         <td>{show.time}</td>
                     </tr>
                     """
-
             # Complete the HTML content
             report_html += """
                         </tbody>
                     </table>
                 </div>
-                <!-- Include Bootstrap JS and jQuery (optional) -->
-                <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-                <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
-                <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
             </body>
             </html>
             """
+            msg.html = report_html
             mail.send(msg)
 
         return "welcome"
 
+
 @celery.task
 def UserTriggered_Job():
-    venues=Venue.query.all()
-    with open("venue.csv","w") as f:
-        f.write(f"Name,Place,City,Capacity\n")
-        for venue in venues:
-            f.write(f"{venue.name},{venue.place},{venue.city},{venue.capacity}\n")
-    return True        
+    with app.app_context():
+        venues=Venue.query.all()
+        with open("venue.csv","w") as f:
+            f.write(f"Name,Place,City,Capacity\n")
+            for venue in venues:
+                f.write(f"{venue.name},{venue.place},{venue.city},{venue.capacity}\n")
+        return True        
     
 
 #  route handler for user loader
@@ -290,42 +285,50 @@ def check_login():
 
 
 # the get  and post route handler for venues
-@app.route('/admindashboard/venues', methods=['GET', 'POST'])
+
+    
+@app.route('/admindashboard/venues', methods=['GET'])
 @jwt_required()
-def all_venues():
-    if request.method == "POST":
-        current_user = admin_loader(get_jwt_identity())
-        print(current_user)
-        post_data = request.get_json()
-        new_venue = Venue(
-            name=post_data.get('name'),
-            place=post_data.get('place'),
-            city=post_data.get('city'),
-            capacity=post_data.get('capacity'),            
-        )
-        db.session.add(new_venue)
-        db.session.commit()
-        return {'status': 'success', 'message': 'Venue added successfully', 'venue' : {
-            'id' : new_venue.id,
-            'name' : new_venue.name,
-            'place' : new_venue.place,
-            'capacity' : new_venue.capacity,
-            'city' : new_venue.city
-        }}
-        
-    else:
-        venues = Venue.query.all()
-        venue_list = []
-        for venue in venues:
-            venue_list.append({
-                'id': venue.id,
-                'name': venue.name,
-                'place': venue.place,
-                'city': venue.city,
-                'capacity': venue.capacity,
-                
-            })
-        return jsonify({'status': 'success', 'venues': venue_list}), 200
+@cache.cached(timeout=20)
+def get_all_venues():
+    venues = Venue.query.all()
+    venue_list = []
+
+    for venue in venues:
+        venue_list.append({
+            'id': venue.id,
+            'name': venue.name,
+            'place': venue.place,
+            'city': venue.city,
+            'capacity': venue.capacity,
+        })
+
+    return jsonify({'status': 'success', 'venues': venue_list}), 200
+
+@app.route('/admindashboard/venues', methods=['POST'])
+@jwt_required()
+def add_venue():
+    current_user = admin_loader(get_jwt_identity())
+    print(current_user)
+    post_data = request.get_json()
+    new_venue = Venue(
+        name=post_data.get('name'),
+        place=post_data.get('place'),
+        city=post_data.get('city'),
+        capacity=post_data.get('capacity'),            
+    )
+
+    db.session.add(new_venue)
+    db.session.commit()
+
+    return {'status': 'success', 'message': 'Venue added successfully', 'venue' : {
+        'id' : new_venue.id,
+        'name' : new_venue.name,
+        'place' : new_venue.place,
+        'capacity' : new_venue.capacity,
+        'city' : new_venue.city
+    }}
+
 
 # route handler for update and delete of venues         
 @app.route('/admindashboard/venues/<venue_id>', methods=['PUT', 'DELETE'])
@@ -361,9 +364,9 @@ def single_venue(venue_id):
 
 
 # Create a route for adding a new show
+
 @app.route('/admindashboard/shows', methods=['GET', 'POST'])
 @jwt_required()
-# @cache.cached(timeout=5) # caching the route for 5 seconds 
 def all_shows():
     response_object = {'status': 'success'} 
     if request.method == "POST":
@@ -427,7 +430,6 @@ def all_shows():
 # route handler for update and delete of shows
 @app.route('/admindashboard/shows/<show_id>', methods=['PUT', 'DELETE'])
 @jwt_required()
-@cache.cached(timeout=5) # caching the route for 5 seconds
 def single_show(show_id):
     current_user = admin_loader(get_jwt_identity())
     print(current_user)
@@ -462,9 +464,8 @@ def single_show(show_id):
         return {"status": "error", "message": "Invalid request method"}, 405
 
 
+# route handler for search shows 
 
-
-# search routes 
 @app.route('/search/shows', methods=['GET'])
 def search_shows():
     query = request.args.get('query')
@@ -495,7 +496,8 @@ def search_shows():
     response_object = {'shows': show_list}
     return jsonify(response_object)
 
-# booking routes for users
+# booking route handler for users
+
 @app.route('/bookings', methods=['GET', 'POST'])
 @jwt_required()
 def all_bookings():
@@ -539,11 +541,12 @@ def all_bookings():
         db.session.commit()
         return {'status':'success','message':'Booking successful'}
     
-#route handler for single show details for bookings
-
+    
+#route handler for single show details for bookings (to fetch the show details in the booking information table)
 
 @app.route('/admindashboard/shows/<int:show_id>', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=20)
 def get_show_details(show_id):
     show = Show.query.get(show_id)
     if not show:

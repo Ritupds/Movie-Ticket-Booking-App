@@ -24,7 +24,7 @@
                 class="form-control"
                 v-model="searchQuery"
                 @input="search"
-                placeholder="Search venues and shows"
+                placeholder="Search shows"
               />
             </div>
             
@@ -186,9 +186,7 @@ export default {
           console.error('Error while searching shows:', error);
         });
     },
-    bookShow(show) {
-      this.$router.push({ name: 'BookShow', params: { showId: show.id } });
-    },
+   
     logout() {
       this.$router.push({ name: "UserLogin" });
     },

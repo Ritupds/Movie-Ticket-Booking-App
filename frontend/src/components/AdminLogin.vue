@@ -38,11 +38,16 @@ import axios from 'axios';
           password: this.password,
         })
         .then(response => {
-          const accessToken = response.data.access_token;
+          // const accessToken = response.data.access_token;
           // Store the access token in local storage or Vuex store
-          localStorage.setItem('access_token', accessToken);
+          localStorage.setItem('access_token',  response.data.access_token);
           // Optionally, you can redirect the user to their dashboard
-          this.$router.push('/admindashboard');
+          // this.$router.push('/admindashboard');
+          if (response.data.is_admin === true) {
+              this.$router.push('/admindashboard');
+            } else {
+              this.error = 'Invalid username or password';
+            }
         })
         .catch(error => {
           console.error(error);
@@ -66,7 +71,7 @@ import axios from 'axios';
               this.$router.push('/admindashboard');
             } 
             else {
-              this.$router.push('/userdashboard');
+              this.error = 'Invalid email or password';
             }
           }
         })

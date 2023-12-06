@@ -34,7 +34,7 @@ export default {
         show_id: '',
         number_of_seats: 1, // Default value
       },
-      shows: [], // Populate with available shows from your API
+      shows: [], 
       message: '',
     };
   },
@@ -52,10 +52,15 @@ export default {
     bookShow() {
       const path="http://127.0.0.1:5000/bookings"
       axios
-        .post(path, this.formData, this.axiosConfig) // Use the appropriate route for booking creation
-        .then((response) => {
-          this.message = response.data.message;
-        })
+        .post(path, this.formData, this.axiosConfig) 
+        
+        .then(()=> {
+            this.error="";
+            if (this.$route.name !== "UserDashboard") {
+              this.$router.push({ name: "UserDashboard" });
+              this.message = "You have booked a show registered successfully. have fun!.";
+            }
+          })
         .catch((error) => {
           this.message = error.response.data.message;
         });
@@ -63,8 +68,9 @@ export default {
   },
   mounted() {
     // Fetch available shows from your Flask API and populate this.shows
-    axios.get('http://127.0.0.1:5000/admindashboard/shows', this.axiosConfig) // Use the appropriate route for fetching shows
-      .then((response) => {
+    axios.get('http://127.0.0.1:5000/admindashboard/shows', this.axiosConfig) 
+      
+    .then((response) => {
         this.shows = response.data.shows;
       })
       .catch((error) => {
@@ -75,7 +81,9 @@ export default {
     let token = localStorage.getItem("access_token");
     if (token == null){
       this.$router.push("/user_login");
-    } 
+    }
+
+    
     
   },
 };
